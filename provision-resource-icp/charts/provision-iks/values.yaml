@@ -1,0 +1,22 @@
+# Default values for redis-cluster.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+fullnameOverride: "provision-iks"
+
+
+## pod Security Context
+securityContext:
+  enabled: "false"
+  fsGroup: 1001
+  runAsUser: 1001
+
+## select your node
+selectnode: 
+  enabled: "true"
+  hostname: proxy
+
+taint:
+  enabled: "true"
+  nodekey: "dedicated"
+  nodevalue: "infra"

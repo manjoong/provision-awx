@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap-iks
+data:
+  entrypoint.sh: |-
+    #!/bin/bash
+    echo "Do this"
+    rc-service sshd restart
+    while true; do sleep 30; done;
+    echo "Do that"
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ include "multi-cluster.fullname" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "multi-cluster.fullname" . }}
+  template:
+    metadata:
+      name: {{ include "multi-cluster.fullname" . }}-pod
+      labels:
+        app: {{ include "multi-cluster.fullname" . }}
+    spec:
+      containers:
+      - name: {{ include "multi-cluster.fullname" . }}
+        image: harbor.ops.action.cloudz.co.kr/iks_provision/provision:1.0
+        # Just spin & wait forever
+        command:
+        - /bin/entrypoint.sh
+        volumeMounts:
+        - mountPath: /bin/entrypoint.sh
+          name: configmap-volume
+          readOnly: true
+          subPath: entrypoint.sh
+       # command: [ "/bin/bash", "-c" ]
+       # args: [ "while true; do sleep 30; done;" ]
+       # imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        - containerPort: 22
+      {{- if eq .Values.selectnode.enabled "true" }}
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.selectnode.hostname }}
+      {{- end }}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      {{- if eq .Values.securityContext.enabled "true" }}
+      securityContext:
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: "{{ .Values.master.priorityClassName }}"
+      {{- end }}
+      terminationGracePeriodSeconds: 30
+      {{- if eq .Values.taint.enabled "true" }}
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/proxy
+        operator: Equal
+      - effect: NoSchedule
+        key: {{ .Values.taint.nodekey }}
+        value: {{ .Values.taint.nodevalue }}
+        operator: Equal
+      {{- end }}
+      volumes:
+        - name: configmap-volume
+          configMap:
+            defaultMode: 0700
+            name: my-configmap-iks
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "multi-cluster.fullname" . }}-svc
+spec:
+  selector:
+    app: {{ include "multi-cluster.fullname" . }}
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+    - name: ssh
+      port: 22
+      protocol: TCP
+      targetPort: 22
+  type: ClusterIP

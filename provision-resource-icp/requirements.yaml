@@ -1,0 +1,20 @@
+---
+dependencies:
+  - name: rabbitmq
+    version: 4.0.1
+    repository: https://kubernetes-charts.storage.googleapis.com/
+    condition: rabbitmq.install
+  - name: postgresql
+    version: 3.7.1
+    repository: https://kubernetes-charts.storage.googleapis.com/
+    condition: postgresql.install
+  - name: memcached
+    version: 2.4.0
+    repository: https://kubernetes-charts.storage.googleapis.com/
+    condition: memcached.install
+  - name: provision-iks
+    version: 0.1.2
+    condition: provision-iks.install
+  - name: provision-eks
+    version: 0.1.2
+    condition: provision-eks.install
